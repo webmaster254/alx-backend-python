@@ -69,8 +69,7 @@ def lazy_paginate(page_size: int) -> Generator[Dict[str, Any], None, None]:
         # Yield each user in the page
         for user in page:
             yield user
-
-
+    return 
 if __name__ == "__main__":
     # Example usage
     print("Lazily paginating through users:")
