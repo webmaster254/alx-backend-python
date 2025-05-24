@@ -1,9 +1,6 @@
 import sqlite3
 import functools
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from datetime import datetime
 
 #### decorator to log SQL queries
 
@@ -24,9 +21,11 @@ def log_queries(func):
         
         # Log the query if found
         if query:
-            logging.info(f"Executing SQL Query: {query}")
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{timestamp}] Executing SQL Query: {query}")
         else:
-            logging.warning("No SQL query found to log")
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{timestamp}] No SQL query found to log")
         
         # Execute the original function
         return func(*args, **kwargs)
