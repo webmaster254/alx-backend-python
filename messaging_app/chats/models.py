@@ -115,15 +115,41 @@ class User(AbstractUser):
 
 class Conversation(models.Model):
     """Model representing a conversation between users"""
-    participants = models.ManyToManyField(User, related_name='conversations')
+    conversation_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        verbose_name='Conversation ID'
+    )
+    participants = models.ManyToManyField(
+        User,
+        related_name='conversations',
+        help_text='Users participating in this conversation'
+    )
+    is_group = models.BooleanField(
+        default=False,
+        help_text='Whether this is a group conversation or direct message'
+    )
+    group_name = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text='Name of the group (only for group conversations)'
+    )
+    group_photo = models.ImageField(
+        upload_to='group_photos/',
+        null=True,
+        blank=True,
+        help_text='Optional photo for group conversations'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    is_group = models.BooleanField(default=False)
-    group_name = models.CharField(max_length=100, blank=True, null=True)
-    group_description = models.TextField(blank=True, null=True)
-
+    
     class Meta:
         ordering = ['-updated_at']
+        verbose_name = 'Conversation'
+        verbose_name_plural = 'Conversations'
 
     def __str__(self):
         if self.is_group:
@@ -134,23 +160,46 @@ class Conversation(models.Model):
 
 class Message(models.Model):
     """Model representing a message in a conversation"""
+    message_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        verbose_name='Message ID'
+    )
     conversation = models.ForeignKey(
         Conversation,
         on_delete=models.CASCADE,
-        related_name='messages'
+        related_name='messages',
+        db_column='conversation_id',
+        to_field='conversation_id',
+        help_text='The conversation this message belongs to'
     )
     sender = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='sent_messages'
+        related_name='sent_messages',
+        help_text='The user who sent this message'
     )
-    content = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-    is_read = models.BooleanField(default=False)
-    read_at = models.DateTimeField(null=True, blank=True)
-
+    content = models.TextField(
+        help_text='The actual message content'
+    )
+    is_read = models.BooleanField(
+        default=False,
+        help_text='Whether the message has been read by the recipient(s)'
+    )
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the message was read by the recipient'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     class Meta:
-        ordering = ['timestamp']
+        ordering = ['-created_at']
+        verbose_name = 'Message'
+        verbose_name_plural = 'Messages'
 
     def mark_as_read(self):
         if not self.is_read:
