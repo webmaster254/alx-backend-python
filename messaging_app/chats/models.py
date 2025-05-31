@@ -181,7 +181,7 @@ class Message(models.Model):
         related_name='sent_messages',
         help_text='The user who sent this message'
     )
-    content = models.TextField(
+    message_body = models.TextField(
         help_text='The actual message content'
     )
     is_read = models.BooleanField(
@@ -193,11 +193,11 @@ class Message(models.Model):
         blank=True,
         help_text='When the message was read by the recipient'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-sent_at']
         verbose_name = 'Message'
         verbose_name_plural = 'Messages'
 
@@ -208,4 +208,4 @@ class Message(models.Model):
             self.save()
 
     def __str__(self):
-        return f"{self.sender.email} in {self.conversation}: {self.content[:50]}"
+        return f"{self.sender.email} in {self.conversation}: {self.message_body[:50]}"
