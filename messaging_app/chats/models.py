@@ -1,7 +1,8 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils import timezone
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 
 
 class UserManager(BaseUserManager):
@@ -16,25 +17,82 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
+        """Create and save a SuperUser with the given email and password."""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('is_verified', True)
+        
+        # Set default first_name and last_name if not provided
+        if 'first_name' not in extra_fields:
+            extra_fields['first_name'] = 'Admin'
+        if 'last_name' not in extra_fields:
+            extra_fields['last_name'] = 'User'
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
-        return self.create_user(email, password, **extra_fields)
+
+        return self._create_user(email, password, **extra_fields)
 
 
 class User(AbstractUser):
     """Custom user model that extends AbstractUser"""
+    user_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        unique=True
+    )
     username = None
-    email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    email = models.EmailField(
+        unique=True,
+        verbose_name='email address'
+    )
+    first_name = models.CharField(
+        max_length=150,
+        validators=[
+            RegexValidator(
+                regex='^[a-zA-Z\s]*$',
+                message='First name can only contain letters and spaces.',
+                code='invalid_first_name'
+            )
+        ]
+    )
+    last_name = models.CharField(
+        max_length=150,
+        validators=[
+            RegexValidator(
+                regex='^[a-zA-Z\s]*$',
+                message='Last name can only contain letters and spaces.',
+                code='invalid_last_name'
+            )
+        ]
+    )
+    phone_number = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex='^\+?1?\d{9,15}$',
+                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
+            )
+        ]
+    )
     bio = models.TextField(max_length=500, blank=True)
     birth_date = models.DateField(null=True, blank=True)
-    profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+    profile_picture = models.ImageField(
+        upload_to='profile_pics/',
+        null=True,
+        blank=True,
+        help_text='Upload a profile picture'
+    )
+    is_verified = models.BooleanField(
+        default=False,
+        help_text='Designates whether the user has verified their email address.'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
