@@ -1,33 +1,37 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
 from . import views
-
-router = DefaultRouter()
-router.register(r'conversations', views.ConversationViewSet, basename='conversation')
-router.register(r'messages', views.MessageViewSet, basename='message')
 
 app_name = 'chats'
 
+# Create a router for chat-specific endpoints
+router = DefaultRouter()
+
+# Register viewsets with the router
+router.register(r'conversations', views.ConversationViewSet, basename='conversation')
+router.register(r'messages', views.MessageViewSet, basename='message')
+router.register(r'users', views.UserViewSet, basename='user')
+
 urlpatterns = [
-    # JWT Authentication
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
-    # API Views
+    # Include DRF router URLs
     path('', include(router.urls)),
     
-    # Custom endpoints
+    # Search endpoint
+    path('search/messages/', views.search_messages, name='search-messages'),
+    
+    # Conversation endpoints
     path('conversations/<uuid:conversation_id>/messages/', 
-         views.ConversationMessagesView.as_view(), 
+         views.ConversationViewSet.as_view({'get': 'messages'}), 
          name='conversation-messages'),
-    path('conversations/<uuid:conversation_id>/mark_read/', 
-         views.MarkConversationAsReadView.as_view(), 
-         name='mark-conversation-read'),
-    path('conversations/user/<uuid:user_id>/', 
-         views.UserConversationsView.as_view(), 
-         name='user-conversations'),
+    path('conversations/<uuid:conversation_id>/add_participant/', 
+         views.ConversationViewSet.as_view({'post': 'add_participant'}), 
+         name='add-participant'),
+    
+    # Message endpoints
+    path('messages/mark_read/', 
+         views.MessageViewSet.as_view({'post': 'mark_multiple_as_read'}), 
+         name='mark-messages-read'),
+    path('messages/<uuid:pk>/mark_read/', 
+         views.MessageViewSet.as_view({'post': 'mark_as_read'}), 
+         name='mark-message-read'),
 ]

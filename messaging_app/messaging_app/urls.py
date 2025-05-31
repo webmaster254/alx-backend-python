@@ -39,34 +39,40 @@ router = DefaultRouter()
 
 # Only register views if the app is loaded to avoid AppRegistryNotReady
 if apps.is_installed('chats'):
-    from chats.views import ConversationViewSet, MessageViewSet
+    from chats.views import ConversationViewSet, MessageViewSet, UserViewSet
+    
+    # Register viewsets with the router
     router.register(r'conversations', ConversationViewSet, basename='conversation')
     router.register(r'messages', MessageViewSet, basename='message')
+    router.register(r'users', UserViewSet, basename='user')
 
 urlpatterns = [
     # Admin site
     path('admin/', admin.site.urls),
     
-    # API endpoints
-    path('api/', include(router.urls)),
+    # API endpoints - v1
+    path('api/v1/', include([
+        # Include router URLs
+        path('', include(router.urls)),
+        
+        # Include chat app URLs
+        path('', include('chats.urls')),
+        
+        # Authentication
+        path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    ])),
     
-    # Authentication
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
-    # API documentation
+    # API Documentation
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', 
             schema_view.without_ui(cache_timeout=0), 
             name='schema-json'),
-    path('swagger/', 
-         schema_view.with_ui('swagger', cache_timeout=0), 
-         name='schema-swagger-ui'),
-    path('redoc/', 
-         schema_view.with_ui('redoc', cache_timeout=0), 
-         name='schema-redoc'),
-    
-    # DRF auth
-    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    re_path(r'^swagger/$', 
+            schema_view.with_ui('swagger', cache_timeout=0), 
+            name='schema-swagger-ui'),
+    re_path(r'^redoc/$', 
+            schema_view.with_ui('redoc', cache_timeout=0), 
+            name='schema-redoc'),
 ]
 
 # Serve static and media files in development

@@ -1,4 +1,7 @@
-from rest_framework import viewsets, status, permissions, filters
+from datetime import datetime
+import logging
+
+from rest_framework import viewsets, status, permissions, filters, serializers
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,8 +10,13 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.conf import settings
+
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer, UserSerializer
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -169,12 +177,65 @@ class MessageViewSet(viewsets.ModelViewSet):
             
         return queryset.distinct()
 
-    
     def get_serializer_context(self):
         """Add request to serializer context."""
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+        
+    def perform_create(self, serializer):
+        """Create a new message with the current user as the sender."""
+        conversation = serializer.validated_data['conversation']
+        
+        # Check if the user is a participant in the conversation
+        if not conversation.participants.filter(id=self.request.user.id).exists():
+            raise serializers.ValidationError({
+                'conversation': 'You are not a participant in this conversation.'
+            })
+            
+        serializer.save(sender=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def mark_as_read(self, request, pk=None):
+        """Mark a message as read."""
+        message = self.get_object()
+        
+        # Only mark as read if the message is not from the current user
+        if message.sender != request.user:
+            message.mark_as_read()
+            return Response(
+                {'status': 'message marked as read'},
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {'status': 'message not marked as read (own message)'},
+            status=status.HTTP_200_OK
+        )
+    
+    @action(detail=False, methods=['post'])
+    def mark_multiple_as_read(self, request):
+        """Mark multiple messages as read."""
+        message_ids = request.data.get('message_ids', [])
+        if not message_ids:
+            return Response(
+                {'error': 'message_ids is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Only update messages that belong to conversations the user is in
+        updated_count = Message.objects.filter(
+            id__in=message_ids,
+            conversation__participants=request.user
+        ).exclude(
+            sender=request.user  # Don't mark own messages as read
+        ).update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+        
+        return Response({
+            'status': f'{updated_count} messages marked as read'
+        })
     
     def perform_create(self, serializer):
         """Create a new message with the current user as the sender."""
@@ -214,3 +275,71 @@ class MessageViewSet(viewsets.ModelViewSet):
             {'status': 'Message was already read or sent by you'},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows users to be viewed.
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['email', 'first_name', 'last_name']
+    ordering_fields = ['first_name', 'last_name', 'date_joined']
+    ordering = ['first_name', 'last_name']
+    pagination_class = StandardResultsSetPagination
+    
+    def get_queryset(self):
+        """
+        This view should return a list of all users
+        except the currently authenticated user.
+        """
+        queryset = User.objects.exclude(id=self.request.user.id)
+        
+        # Filter by search query
+        search = self.request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(email__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search)
+            )
+            
+        return queryset.distinct()
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def search_messages(request):
+    """
+    Search messages across all conversations the user is a part of.
+    """
+    query = request.query_params.get('q', None)
+    if not query:
+        return Response(
+            {'error': 'Search query parameter "q" is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Search in messages where the user is a participant
+    messages = Message.objects.filter(
+        Q(conversation__participants=request.user) &
+        (
+            Q(message_body__icontains=query) |
+            Q(sender__first_name__icontains=query) |
+            Q(sender__last_name__icontains=query) |
+            Q(sender__email__icontains=query)
+        )
+    ).order_by('-sent_at')
+    
+    # Paginate results
+    paginator = StandardResultsSetPagination()
+    page = paginator.paginate_queryset(messages, request)
+    
+    if page is not None:
+        serializer = MessageSerializer(page, many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
+    
+    serializer = MessageSerializer(messages, many=True, context={'request': request})
+    return Response(serializer.data)
