@@ -2,11 +2,12 @@ from datetime import datetime
 import logging
 
 from rest_framework import viewsets, status, permissions, filters, serializers
+from django_filters.rest_framework import DjangoFilterBackend
 from .permissions import IsParticipantOfConversation
+from .filters import MessageFilter, ConversationFilter
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.utils import timezone
@@ -21,10 +22,8 @@ logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 20
-    page_size_query_param = 'page_size'
-    max_page_size = 100
+# Import custom pagination classes
+from .pagination import StandardResultsSetPagination, MessageLimitOffsetPagination, MessageCursorPagination
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
@@ -33,7 +32,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
     permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ConversationFilter
     search_fields = ['group_name', 'participants__email', 'participants__first_name', 'participants__last_name']
     ordering_fields = ['updated_at', 'created_at']
     ordering = ['-updated_at']
@@ -139,11 +139,12 @@ class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = MessageFilter
     search_fields = ['message_body', 'sender__email', 'sender__first_name', 'sender__last_name']
     ordering_fields = ['sent_at', 'updated_at']
     ordering = ['-sent_at']
-    pagination_class = StandardResultsSetPagination
+    pagination_class = MessageCursorPagination  # Using cursor pagination for messages
 
     def get_queryset(self):
         """
