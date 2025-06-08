@@ -1,0 +1,738 @@
+{
+	"info": {
+		"_postman_id": "e8a126c8-b442-4ddc-9f5e-5df7a5eb4628",
+		"name": "Messaging App API",
+		"description": "Collection for testing the Messaging App API endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Get JWT Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"pm.environment.set(\"access_token\", jsonData.access);",
+									"pm.environment.set(\"refresh_token\", jsonData.refresh);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/token/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"token",
+								""
+							]
+						},
+						"description": "Get JWT access and refresh tokens by providing valid credentials"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh JWT Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const jsonData = pm.response.json();",
+									"pm.environment.set(\"access_token\", jsonData.access);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/token/refresh/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"token",
+								"refresh",
+								""
+							]
+						},
+						"description": "Refresh the JWT access token using a valid refresh token"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for obtaining JWT tokens"
+		},
+		{
+			"name": "Conversations",
+			"item": [
+				{
+					"name": "List All Conversations",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations",
+								""
+							],
+							"query": [
+								{
+									"key": "is_group",
+									"value": "true",
+									"description": "Filter by group conversations",
+									"disabled": true
+								},
+								{
+									"key": "participant_email",
+									"value": "user@example.com",
+									"description": "Filter by participant email",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "search_term",
+									"description": "Search in group names or participant names",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all conversations for the authenticated user"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Direct Message Conversation",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"is_group\": false,\n    \"participants\": [\"{{recipient_user_id}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations",
+								""
+							]
+						},
+						"description": "Create a new direct message conversation with another user"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Group Conversation",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"is_group\": true,\n    \"group_name\": \"Test Group\",\n    \"participants\": [\"{{participant1_id}}\", \"{{participant2_id}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations",
+								""
+							]
+						},
+						"description": "Create a new group conversation with multiple users"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Conversation Details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations",
+								"{{conversation_id}}",
+								""
+							]
+						},
+						"description": "Get details of a specific conversation"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Participant to Conversation",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": \"{{new_participant_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}/add_participant/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations",
+								"{{conversation_id}}",
+								"add_participant",
+								""
+							]
+						},
+						"description": "Add a new participant to an existing conversation"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Conversation Messages",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}/messages/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations",
+								"{{conversation_id}}",
+								"messages",
+								""
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all messages in a conversation"
+					},
+					"response": []
+				},
+				{
+					"name": "Unauthorized - Get Conversation",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"conversations",
+								"{{conversation_id}}",
+								""
+							]
+						},
+						"description": "Try to access a conversation without authentication (should be rejected)"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing conversations"
+		},
+		{
+			"name": "Messages",
+			"item": [
+				{
+					"name": "List All Messages",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/messages/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"messages",
+								""
+							],
+							"query": [
+								{
+									"key": "conversation",
+									"value": "{{conversation_id}}",
+									"description": "Filter by conversation ID",
+									"disabled": true
+								},
+								{
+									"key": "sender",
+									"value": "{{sender_id}}",
+									"description": "Filter by sender ID",
+									"disabled": true
+								},
+								{
+									"key": "is_read",
+									"value": "false",
+									"description": "Filter by read status",
+									"disabled": true
+								},
+								{
+									"key": "sent_after",
+									"value": "2025-06-01T00:00:00Z",
+									"description": "Filter by sent date (after)",
+									"disabled": true
+								},
+								{
+									"key": "content",
+									"value": "search_text",
+									"description": "Filter by message content",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all messages the user has access to"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"conversation\": \"{{conversation_id}}\",\n    \"message_body\": \"Hello, this is a test message!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/messages/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"messages",
+								""
+							]
+						},
+						"description": "Send a new message in a conversation"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Message Details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/messages/{{message_id}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"messages",
+								"{{message_id}}",
+								""
+							]
+						},
+						"description": "Get details of a specific message"
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Message as Read",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/messages/{{message_id}}/mark_as_read/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"messages",
+								"{{message_id}}",
+								"mark_as_read",
+								""
+							]
+						},
+						"description": "Mark a message as read"
+					},
+					"response": []
+				},
+				{
+					"name": "Unauthorized - Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"conversation\": \"{{conversation_id}}\",\n    \"message_body\": \"This should be rejected!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/messages/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"messages",
+								""
+							]
+						},
+						"description": "Try to send a message without authentication (should be rejected)"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Messages",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/search_messages/?query=hello",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"search_messages",
+								""
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "hello",
+									"description": "Search query"
+								}
+							]
+						},
+						"description": "Search for messages across conversations"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing messages"
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "List Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								""
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "john",
+									"description": "Search users by name or email",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get a list of all users"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}",
+								""
+							]
+						},
+						"description": "Get details for a specific user"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for user management"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "user_email",
+			"value": "test@example.com",
+			"type": "string"
+		},
+		{
+			"key": "user_password",
+			"value": "your_password_here",
+			"type": "string"
+		}
+	]
+}

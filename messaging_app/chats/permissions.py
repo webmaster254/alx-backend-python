@@ -17,16 +17,33 @@ class IsParticipantOfConversation(permissions.BasePermission):
         """
         Check if the user is a participant of the conversation.
         This works for both Conversation objects and Message objects.
+        
+        For PUT, PATCH, and DELETE requests, additional restrictions may apply.
         """
         user = request.user
         
         # Handle Conversation objects directly
         if hasattr(obj, 'participants'):
-            return obj.participants.filter(user_id=user.user_id).exists()
+            # Basic permission check for all methods
+            is_participant = obj.participants.filter(user_id=user.user_id).exists()
+            
+            # For unsafe methods (PUT, PATCH, DELETE), add extra validations if needed
+            if request.method in ["PUT", "PATCH", "DELETE"]:
+                # Only allow modifications to conversations if user is a participant
+                return is_participant
+                
+            return is_participant
         
         # Handle Message objects by checking the associated conversation
         elif hasattr(obj, 'conversation'):
-            return obj.conversation.participants.filter(user_id=user.user_id).exists()
+            is_participant = obj.conversation.participants.filter(user_id=user.user_id).exists()
+            
+            # For unsafe methods, only allow changes to messages created by the user
+            if request.method in ["PUT", "PATCH", "DELETE"]:
+                # Check if user is the sender of the message
+                return is_participant and obj.sender.user_id == user.user_id
+                
+            return is_participant
         
         # Default deny if object type is unknown
         return False
