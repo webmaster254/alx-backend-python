@@ -55,9 +55,6 @@ urlpatterns = [
         # Include router URLs
         path('', include(router.urls)),
         
-        # Include chat app URLs
-        path('', include('chats.urls')),
-        
         # Authentication
         path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
         path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

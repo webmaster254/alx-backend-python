@@ -2,6 +2,7 @@ from datetime import datetime
 import logging
 
 from rest_framework import viewsets, status, permissions, filters, serializers
+from .permissions import IsParticipantOfConversation
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -31,7 +32,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     """
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['group_name', 'participants__email', 'participants__first_name', 'participants__last_name']
     ordering_fields = ['updated_at', 'created_at']
@@ -137,7 +138,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['message_body', 'sender__email', 'sender__first_name', 'sender__last_name']
     ordering_fields = ['sent_at', 'updated_at']
