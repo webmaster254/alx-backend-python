@@ -1,0 +1,12 @@
+{{base_url}}/api/v1/conversations/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/add_participant/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/remove_participant/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/messages/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/messages/{{message_id}}/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/messages/{{message_id}}/update/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/messages/{{message_id}}/delete/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/messages/{{message_id}}/mark_as_read/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/messages/{{message_id}}/mark_as_unread/
+{{base_url}}/api/v1/conversations/{{conversation_id}}/messages/{{message_id}}/mark_as_deleted/
+
