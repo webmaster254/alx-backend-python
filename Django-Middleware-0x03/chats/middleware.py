@@ -19,11 +19,11 @@ class RequestLoggingMiddleware:
         self.get_response = get_response
         
         # Create logs directory if it doesn't exist
-        log_dir = os.path.join(settings.BASE_DIR, 'logs')
+        log_dir = os.path.join(settings.BASE_DIR, '')
         os.makedirs(log_dir, exist_ok=True)
         
         # Set up logging configuration
-        log_file = os.path.join(log_dir, 'request_logs.txt')
+        log_file = os.path.join(log_dir, 'requests.log')
         
         # Configure logger
         self.logger = logging.getLogger('request_logger')
