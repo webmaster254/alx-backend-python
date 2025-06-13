@@ -105,6 +105,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'chats.middleware.RestrictAccessByTimeMiddleware',  # Time-based access restriction middleware
+    'chats.middleware.OffensiveLanguageMiddleware',  # Rate limiting middleware for chat messages
     'chats.middleware.RequestLoggingMiddleware',  # Custom request logging middleware
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
