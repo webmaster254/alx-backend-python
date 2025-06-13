@@ -104,10 +104,10 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    
+    'chats.middleware.RestrictAccessByTimeMiddleware',  # Time-based access restriction middleware
+    'chats.middleware.RequestLoggingMiddleware',  # Custom request logging middleware
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'chats.middleware.RequestLoggingMiddleware',  # Custom request logging middleware
 ]
 
 # CORS settings
