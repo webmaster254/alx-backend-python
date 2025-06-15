@@ -1,5 +1,52 @@
 from django.db import models
 
+
+from django.contrib.auth.models import User
+
+
+class Message(models.Model):
+    """Model representing a message in a conversation"""
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='sent_messages',
+        help_text='The user who sent this message'
+    )
+    receiver = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='received_messages',
+        help_text='The user who received this message'
+    )
+    content = models.TextField(
+        help_text='The actual message content'
+    )
+    is_read = models.BooleanField(
+        default=False,
+        help_text='Whether the message has been read by the recipient(s)'
+    )
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the message was read by the recipient'
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-sent_at']
+        verbose_name = 'Message'
+        verbose_name_plural = 'Messages'
+
+    def mark_as_read(self):
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+
+    def __str__(self):
+        return f"{self.sender.email} to {self.receiver.email}: {self.content[:50]}"
 # Create your models here.
 class Notification(models.Model):
     """Model representing notifications for users"""
