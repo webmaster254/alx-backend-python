@@ -181,6 +181,14 @@ class Message(models.Model):
         related_name='sent_messages',
         help_text='The user who sent this message'
     )
+    parent_message = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        related_name='replies',
+        null=True,
+        blank=True,
+        help_text='The message this is a reply to (for threaded conversations)'
+    )
     message_body = models.TextField(
         help_text='The actual message content'
     )
@@ -226,4 +234,91 @@ class Message(models.Model):
         return f"{self.sender.email} in {self.conversation}: {self.message_body[:50]}"
 
 
+class Notification(models.Model):
+    """Model for user notifications"""
+    notification_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        help_text='User who will receive the notification'
+    )
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        help_text='The message that triggered this notification'
+    )
+    notification_type = models.CharField(
+        max_length=50,
+        default='new_message',
+        help_text='Type of notification'
+    )
+    is_read = models.BooleanField(
+        default=False,
+        help_text='Whether the notification has been read'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the notification was read'
+    )
 
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Notification'
+        verbose_name_plural = 'Notifications'
+
+    def mark_as_read(self):
+        """Mark this notification as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+
+    def __str__(self):
+        return f"Notification for {self.user.email}: {self.notification_type}"
+
+
+class MessageHistory(models.Model):
+    """Model to track message edit history"""
+    history_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name='edit_history',
+        help_text='The message that was edited'
+    )
+    old_content = models.TextField(
+        help_text='Previous content before edit'
+    )
+    edited_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='message_edits',
+        help_text='User who made the edit'
+    )
+    edit_timestamp = models.DateTimeField(auto_now_add=True)
+    edit_reason = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text='Optional reason for the edit'
+    )
+
+    class Meta:
+        ordering = ['-edit_timestamp']
+        verbose_name = 'Message History'
+        verbose_name_plural = 'Message Histories'
+
+    def __str__(self):
+        return f"Edit by {self.edited_by.email} at {self.edit_timestamp}"
