@@ -331,3 +331,11 @@ def create_reply(request):
         return JsonResponse({'error': 'Invalid JSON data'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def threaded_messages_ui(request):
+    """
+    Render the threaded messages UI template.
+    """
+    return render(request, 'messaging/threaded_messages.html')

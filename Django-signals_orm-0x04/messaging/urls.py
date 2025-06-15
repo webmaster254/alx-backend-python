@@ -11,4 +11,5 @@ urlpatterns = [
     path('messages/threaded/', views.get_threaded_messages, name='get_threaded_messages'),
     path('messages/thread/<uuid:message_id>/', views.get_message_thread, name='get_message_thread'),
     path('messages/reply/', views.create_reply, name='create_reply'),
+    path('ui/threaded/', views.threaded_messages_ui, name='threaded_messages_ui'),
 ]

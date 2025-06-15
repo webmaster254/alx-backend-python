@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.conf import settings
 
 from django.contrib.auth.models import User
+from .managers import UnreadMessagesManager, ThreadedMessagesManager
 
 
 class Message(models.Model):
@@ -54,6 +55,11 @@ class Message(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     
+    # Custom managers
+    objects = models.Manager()  # Default manager
+    unread = UnreadMessagesManager()  # Custom manager for unread messages
+    threaded = ThreadedMessagesManager()  # Custom manager for threaded operations
+
     class Meta:
         ordering = ['-sent_at']
         verbose_name = 'Message'
