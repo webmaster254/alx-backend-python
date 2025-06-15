@@ -195,6 +195,15 @@ class Message(models.Model):
     )
     sent_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    edited = models.BooleanField(
+        default=False,
+        help_text='Whether this message has been edited'
+    )
+    edited_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the message was last edited'
+    )
     
     class Meta:
         ordering = ['-sent_at']
@@ -207,8 +216,59 @@ class Message(models.Model):
             self.read_at = timezone.now()
             self.save()
 
+    def mark_as_edited(self):
+        """Mark this message as edited"""
+        if not self.edited:
+            self.edited = True
+            self.edited_at = timezone.now()
+
     def __str__(self):
         return f"{self.sender.email} in {self.conversation}: {self.message_body[:50]}"
+
+
+class MessageHistory(models.Model):
+    """Model to store the history of message edits"""
+    history_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        verbose_name='History ID'
+    )
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name='edit_history',
+        help_text='The message this history entry belongs to'
+    )
+    old_content = models.TextField(
+        help_text='The previous content of the message before the edit'
+    )
+    edited_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='message_edits',
+        help_text='The user who made this edit'
+    )
+    edit_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text='When this edit was made'
+    )
+    edit_reason = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text='Optional reason for the edit'
+    )
+
+    class Meta:
+        db_table = 'message_history'
+        verbose_name = 'Message History'
+        verbose_name_plural = 'Message Histories'
+        ordering = ['-edit_timestamp']
+
+    def __str__(self):
+        return f"Edit history for message {self.message.message_id} by {self.edited_by.email}"
 
 
 class Notification(models.Model):
