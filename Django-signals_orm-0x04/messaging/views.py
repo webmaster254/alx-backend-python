@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout
+from django.contrib.auth import logout, user_logged_out
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
@@ -23,7 +23,7 @@ def delete_user(request):
         if request.method == "DELETE":
             # Handle API request with JSON data
             if hasattr(request, 'user') and request.user.is_authenticated:
-                user_to_delete = request.user
+                user = request.user
             else:
                 # For API requests, expect user_id in request body
                 data = json.loads(request.body)
@@ -34,7 +34,7 @@ def delete_user(request):
                     }, status=400)
                 
                 try:
-                    user_to_delete = User.objects.get(id=user_id)
+                    user = User.objects.get(id=user_id)
                 except User.DoesNotExist:
                     return JsonResponse({
                         'error': 'User not found'
@@ -46,29 +46,29 @@ def delete_user(request):
                 return JsonResponse({
                     'error': 'Authentication required'
                 }, status=401)
-            user_to_delete = request.user
+            user = request.user
         
         # Get user information before deletion for response
         user_info = {
-            'id': user_to_delete.id,
-            'username': user_to_delete.username,
-            'email': user_to_delete.email
+            'id': user.id,
+            'username': user.username,
+            'email': user.email
         }
         
         # Use transaction to ensure all deletions happen atomically
         with transaction.atomic():
             # Count related data before deletion for reporting
-            messages_count = Message.objects.filter(sender=user_to_delete).count()
-            received_messages_count = Message.objects.filter(receiver=user_to_delete).count()
-            notifications_count = Notification.objects.filter(user=user_to_delete).count()
-            edit_history_count = MessageHistory.objects.filter(edited_by=user_to_delete).count()
+            messages_count = Message.objects.filter(sender=user).count()
+            received_messages_count = Message.objects.filter(receiver=user).count()
+            notifications_count = Notification.objects.filter(user=user).count()
+            edit_history_count = MessageHistory.objects.filter(edited_by=user).count()
             
             # Log out the user if they're currently authenticated
-            if hasattr(request, 'user') and request.user == user_to_delete:
+            if hasattr(request, 'user') and request.user == user:
                 logout(request)
             
             # Delete the user (CASCADE relationships will handle related data)
-            user_to_delete.delete()
+            user.delete()
             
             return JsonResponse({
                 'message': 'User account successfully deleted',
