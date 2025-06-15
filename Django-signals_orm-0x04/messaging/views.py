@@ -1,19 +1,21 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout, user_logged_out
+from django.contrib.auth import get_user_model, logout, user_logged_out
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import get_user_model
+from django.views.decorators.cache import cache_page
+from django.db.models import Q, Prefetch
 from django.db import transaction
-from django.db.models import Prefetch, Q
-from .models import Message, Notification, MessageHistory
 import json
+
+from .models import Message, Notification, MessageHistory
 
 User = get_user_model()
 
 
 # Create your views here.
+
 
 @csrf_exempt
 @require_http_methods(["DELETE", "POST"])
@@ -225,6 +227,7 @@ def serialize_message(message):
 
 @login_required
 @require_http_methods(["GET"])
+@cache_page(60, key_prefix='threaded_messages')
 def get_threaded_messages(request):
     """
     API endpoint to fetch threaded messages with optimized queries.
