@@ -95,6 +95,7 @@ INSTALLED_APPS = [
     
     # Local apps
     'chats',
+    'messaging',
 ]
 
 MIDDLEWARE = [

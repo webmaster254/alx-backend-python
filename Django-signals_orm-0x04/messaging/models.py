@@ -19,6 +19,14 @@ class Message(models.Model):
         related_name='received_messages',
         help_text='The user who received this message'
     )
+    parent_message = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        related_name='replies',
+        null=True,
+        blank=True,
+        help_text='The message this is a reply to (for threaded conversations)'
+    )
     content = models.TextField(
         help_text='The actual message content'
     )
@@ -49,6 +57,7 @@ class Message(models.Model):
         ordering = ['-sent_at']
         verbose_name = 'Message'
         verbose_name_plural = 'Messages'
+        db_table = 'messaging_messages'
 
     def mark_as_read(self):
         if not self.is_read:
@@ -101,7 +110,7 @@ class MessageHistory(models.Model):
     )
 
     class Meta:
-        db_table = 'message_history'
+        db_table = 'messaging_message_history'
         verbose_name = 'Message History'
         verbose_name_plural = 'Message Histories'
         ordering = ['-edit_timestamp']
@@ -168,7 +177,7 @@ class Notification(models.Model):
     )
 
     class Meta:
-        db_table = 'notifications'
+        db_table = 'messaging_notifications'
         verbose_name = 'Notification'
         verbose_name_plural = 'Notifications'
         ordering = ['-created_at']
