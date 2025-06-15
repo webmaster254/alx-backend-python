@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+import json
 
 from rest_framework import viewsets, status, permissions, filters, serializers
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,8 +14,13 @@ from django.db.models import Q
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.contrib.auth import logout
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 
-from .models import Conversation, Message
+from .models import Conversation, Message, Notification, MessageHistory
 from .serializers import ConversationSerializer, MessageSerializer, UserSerializer
 
 # Set up logging
@@ -345,3 +351,43 @@ def search_messages(request):
     
     serializer = MessageSerializer(messages, many=True, context={'request': request})
     return Response(serializer.data)
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def delete_user(request):
+    """
+    Delete the current user's account.
+    """
+    user = request.user
+    try:
+        with transaction.atomic():
+            # Remove user from all conversations
+            conversations = Conversation.objects.filter(participants=user)
+            for conversation in conversations:
+                conversation.participants.remove(user)
+            
+            # Remove user from all messages
+            messages = Message.objects.filter(sender=user)
+            for message in messages:
+                message.sender = None
+                message.save()
+            
+            # Remove user from all notifications
+            notifications = Notification.objects.filter(user=user)
+            notifications.delete()
+            
+            # Remove user from all message history
+            message_history = MessageHistory.objects.filter(user=user)
+            message_history.delete()
+            
+            # Delete the user
+            user.delete()
+        
+        logout(request)
+        return JsonResponse({'status': 'Account deleted successfully'})
+    
+    except Exception as e:
+        logger.error(f'Error deleting user account: {e}')
+        return JsonResponse({'error': 'Failed to delete account'}, status=500)

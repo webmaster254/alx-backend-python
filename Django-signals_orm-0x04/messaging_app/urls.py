@@ -61,6 +61,9 @@ urlpatterns = [
         path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     ])),
     
+    # Messaging app URLs
+    path('messaging/', include('messaging.urls')),
+    
     # API Documentation
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', 
             schema_view.without_ui(cache_timeout=0), 
