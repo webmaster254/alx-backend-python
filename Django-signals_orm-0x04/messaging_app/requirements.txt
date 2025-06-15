@@ -1,6 +1,0 @@
-Django==5.2.1
-Django-cors-headers==4.1.0
-Django-filter==24.0
-Django-rest-framework==3.14.0
-Django-rest-framework-simplejwt==5.2.2
-Django-yasg==2.2.0

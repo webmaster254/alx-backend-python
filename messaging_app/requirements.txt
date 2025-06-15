@@ -4,3 +4,4 @@ Django-filter==24.0
 Django-rest-framework==3.14.0
 Django-rest-framework-simplejwt==5.2.2
 Django-yasg==2.2.0
+Pillow==10.1.0
