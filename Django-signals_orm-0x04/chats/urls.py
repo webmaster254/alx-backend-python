@@ -38,4 +38,7 @@ urlpatterns = [
     path('messages/<uuid:pk>/mark_read/', 
          views.MessageViewSet.as_view({'post': 'mark_as_read'}), 
          name='mark-message-read'),
+    
+    # User account management
+    path('delete-account/', views.delete_user, name='delete_user'),
 ]
