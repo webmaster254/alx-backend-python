@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 
 from django.contrib.auth.models import User
 
@@ -8,15 +9,15 @@ from django.contrib.auth.models import User
 class Message(models.Model):
     """Model representing a message in a conversation"""
     sender = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='sent_messages',
+        related_name='messaging_sent_messages',
         help_text='The user who sent this message'
     )
     receiver = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='received_messages',
+        related_name='messaging_received_messages',
         help_text='The user who received this message'
     )
     parent_message = models.ForeignKey(
@@ -93,9 +94,9 @@ class MessageHistory(models.Model):
         help_text='The previous content of the message before the edit'
     )
     edited_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='message_edits',
+        related_name='messaging_message_edits',
         help_text='The user who made this edit'
     )
     edit_timestamp = models.DateTimeField(
@@ -136,9 +137,9 @@ class Notification(models.Model):
         verbose_name='Notification ID'
     )
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='notifications',
+        related_name='messaging_notifications',
         help_text='The user who will receive this notification'
     )
     message = models.ForeignKey(

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threaded Messages - Optimized Conversations</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .header {
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .thread {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin: 15px 0;
+            background: #fafafa;
+        }
+        .message {
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            margin: 10px 0;
+            background: white;
+            border-radius: 4px;
+        }
+        .message.reply {
+            margin-left: 30px;
+            border-left-color: #28a745;
+            background: #f8f9fa;
+        }
+        .message.nested-reply {
+            margin-left: 60px;
+            border-left-color: #ffc107;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .sender-info {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .message-content {
+            line-height: 1.5;
+            color: #333;
+        }
+        .reply-form {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .stats {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .truncated {
+            color: #6c757d;
+            font-style: italic;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Threaded Messages</h1>
+            <p>Optimized conversation view with <code>select_related</code> and <code>prefetch_related</code></p>
+            <div class="stats" id="queryStats">
+                Loading statistics...
+            </div>
+        </div>
+
+        <div class="reply-form">
+            <h3>Filter Conversations</h3>
+            <div class="form-group">
+                <label for="partnerSelect">Conversation Partner (optional):</label>
+                <select id="partnerSelect" class="form-control">
+                    <option value="">All conversations</option>
+                </select>
+            </div>
+            <button onclick="loadThreadedMessages()" class="btn btn-primary">Load Messages</button>
+            <button onclick="loadSpecificThread()" class="btn btn-success">Load Specific Thread</button>
+        </div>
+
+        <div id="messagesContainer">
+            <div class="loading">Click "Load Messages" to view threaded conversations</div>
+        </div>
+
+        <div class="reply-form" style="display: none;" id="replyForm">
+            <h3>Create Reply</h3>
+            <div class="form-group">
+                <label for="parentMessageId">Parent Message ID:</label>
+                <input type="text" id="parentMessageId" class="form-control" placeholder="Enter parent message UUID">
+            </div>
+            <div class="form-group">
+                <label for="receiverId">Receiver ID:</label>
+                <input type="text" id="receiverId" class="form-control" placeholder="Enter receiver UUID">
+            </div>
+            <div class="form-group">
+                <label for="replyContent">Reply Content:</label>
+                <textarea id="replyContent" class="form-control" rows="3" placeholder="Enter your reply"></textarea>
+            </div>
+            <button onclick="createReply()" class="btn btn-success">Send Reply</button>
+        </div>
+    </div>
+
+    <script>
+        function formatDateTime(isoString) {
+            return new Date(isoString).toLocaleString();
+        }
+
+        function renderMessage(messageData, isReply = false, depth = 0) {
+            const message = messageData.message;
+            const replies = messageData.replies || [];
+            const replyCount = messageData.reply_count || 0;
+            const truncated = messageData.truncated || false;
+
+            let cssClass = 'message';
+            if (depth > 0) cssClass += ' reply';
+            if (depth > 1) cssClass += ' nested-reply';
+
+            let html = `
+                <div class="${cssClass}" data-message-id="${message.id}">
+                    <div class="message-header">
+                        <div class="sender-info">
+                            ${message.sender.email} → ${message.receiver.email}
+                            ${message.edited ? ' (edited)' : ''}
+                        </div>
+                        <div class="timestamp">
+                            ${formatDateTime(message.sent_at)}
+                            ${message.parent_message_id ? `(Reply to: ${message.parent_message_id.substring(0, 8)}...)` : ''}
+                        </div>
+                    </div>
+                    <div class="message-content">${message.content}</div>
+                    ${replyCount > 0 ? `<div class="stats">Replies: ${replyCount}</div>` : ''}
+                </div>
+            `;
+
+            // Recursively render replies
+            replies.forEach(reply => {
+                html += renderMessage(reply, true, depth + 1);
+            });
+
+            if (truncated) {
+                html += '<div class="truncated">... replies truncated (increase max_depth to see more)</div>';
+            }
+
+            return html;
+        }
+
+        function renderThread(threadData) {
+            return `
+                <div class="thread">
+                    ${renderMessage(threadData)}
+                </div>
+            `;
+        }
+
+        async function loadThreadedMessages() {
+            const container = document.getElementById('messagesContainer');
+            const stats = document.getElementById('queryStats');
+            const partnerId = document.getElementById('partnerSelect').value;
+            
+            container.innerHTML = '<div class="loading">Loading threaded messages...</div>';
+            
+            try {
+                let url = '/messaging/messages/threaded/';
+                if (partnerId) {
+                    url += `?partner_id=${partnerId}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    stats.innerHTML = `
+                        Total threads: ${data.total_threads} | 
+                        Optimized queries: ~${data.query_count} DB hits | 
+                        Performance: Excellent with select_related/prefetch_related
+                    `;
+                    
+                    if (data.conversations.length === 0) {
+                        container.innerHTML = '<div class="loading">No threaded conversations found</div>';
+                    } else {
+                        container.innerHTML = data.conversations.map(renderThread).join('');
+                    }
+                    
+                    // Show reply form
+                    document.getElementById('replyForm').style.display = 'block';
+                } else {
+                    container.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="error">Network error: ${error.message}</div>`;
+            }
+        }
+
+        async function loadSpecificThread() {
+            const messageId = prompt('Enter message ID to view its thread:');
+            if (!messageId) return;
+            
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '<div class="loading">Loading specific thread...</div>';
+            
+            try {
+                const response = await fetch(`/messaging/messages/thread/${messageId}/?max_depth=8`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('queryStats').innerHTML = `
+                        Specific thread loaded | Max depth: ${data.max_depth} | 
+                        Recursive ORM queries optimized with select_related
+                    `;
+                    
+                    container.innerHTML = renderThread(data.thread);
+                    document.getElementById('replyForm').style.display = 'block';
+                } else {
+                    container.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="error">Network error: ${error.message}</div>`;
+            }
+        }
+
+        async function createReply() {
+            const parentMessageId = document.getElementById('parentMessageId').value;
+            const receiverId = document.getElementById('receiverId').value;
+            const content = document.getElementById('replyContent').value;
+            
+            if (!parentMessageId || !receiverId || !content) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/messaging/messages/reply/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        parent_message_id: parentMessageId,
+                        receiver_id: receiverId,
+                        content: content
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Reply created successfully!');
+                    document.getElementById('replyContent').value = '';
+                    loadThreadedMessages(); // Refresh the view
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Network error: ${error.message}`);
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // You can populate the partner select dropdown here with actual users
+            console.log('Threaded Messages UI loaded');
+            console.log('Features:');
+            console.log('- Optimized queries with select_related and prefetch_related');
+            console.log('- Recursive reply retrieval for threaded display');
+            console.log('- Efficient database query reduction');
+        });
+    </script>
+</body>
+</html>
