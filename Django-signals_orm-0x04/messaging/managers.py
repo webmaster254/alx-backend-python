@@ -8,20 +8,15 @@ class UnreadMessagesManager(models.Manager):
     Provides methods to filter unread messages for specific users with performance optimizations.
     """
     
-    def for_user(self, user):
+    def unread_for_user(self, user):
         """
         Get all unread messages for a specific user (where they are the receiver).
-        Uses .only() to retrieve only essential fields for performance.
+        Uses select_related to optimize related lookups.
         """
         return self.get_queryset().filter(
             receiver=user,
             is_read=False
-        ).select_related(
-            'sender'  # Optimize sender lookups
-        ).only(
-            'id', 'content', 'sent_at', 'sender__id', 'sender__email', 
-            'sender__first_name', 'sender__last_name', 'parent_message_id'
-        ).order_by('-sent_at')
+        ).select_related('sender').order_by('-sent_at')
     
     def count_for_user(self, user):
         """

@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Unread Messages - Messaging App{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-envelope"></i> Unread Messages
+                        <span class="badge bg-secondary">{{ unread_count }}</span>
+                    </h2>
+                </div>
+                
+                <div class="list-group list-group-flush">
+                    {% if unread_messages %}
+                        {% for message in unread_messages %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">
+                                        <a href="{% url 'messaging:get_message_thread' message_id=message.id %}">
+                                            {{ message.sender.get_full_name|default:message.sender.email }}
+                                        </a>
+                                    </h5>
+                                    <small class="text-muted">
+                                        {{ message.sent_at|timesince }} ago
+                                    </small>
+                                </div>
+                                <p class="mb-1">{{ message.content|truncatewords:30 }}</p>
+                                <div class="d-flex justify-content-end">
+                                    <form class="mark-read-form" data-message-id="{{ message.id }}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-check"></i> Mark as Read
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="list-group-item text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p class="h5">No unread messages</p>
+                            <p class="mb-0">Your inbox is all caught up!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if unread_messages %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle mark as read forms
+    const forms = document.querySelectorAll('.mark-read-form');
+    
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const messageId = this.dataset.messageId;
+            const url = `/messaging/messages/${messageId}/mark-read/`;
+            const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Remove the message from the UI
+                    const messageItem = form.closest('.list-group-item');
+                    messageItem.style.opacity = '0.5';
+                    setTimeout(() => {
+                        messageItem.remove();
+                        
+                        // Update unread count
+                        const badge = document.querySelector('.badge.bg-secondary');
+                        if (badge) {
+                            const newCount = parseInt(badge.textContent) - 1;
+                            if (newCount > 0) {
+                                badge.textContent = newCount;
+                            } else {
+                                // Show empty state if no more messages
+                                const list = document.querySelector('.list-group');
+                                list.innerHTML = `
+                                    <div class="list-group-item text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                                        <p class="h5">No unread messages</p>
+                                        <p class="mb-0">Your inbox is all caught up!</p>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }, 300);
+                }
+            })
+            .catch(error => {
+                console.error('Error marking message as read:', error);
+                alert('Failed to mark message as read. Please try again.');
+            });
+        });
+    });
+});
+</script>
+{% endif %}
+
+{% endblock %}

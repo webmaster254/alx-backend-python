@@ -1,14 +1,16 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout, user_logged_out
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from .models import Message, Notification, MessageHistory
 import json
+
+User = get_user_model()
 
 
 # Create your views here.
@@ -331,6 +333,55 @@ def create_reply(request):
         return JsonResponse({'error': 'Invalid JSON data'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def unread_messages(request):
+    """
+    View to display unread messages for the current user.
+    Uses the custom manager with .only() for optimized field selection.
+    """
+    # Get unread messages using our custom manager
+    unread_msgs = Message.unread.unread_for_user(request.user
+                                                 ).only(
+                                                     'id',
+                                                     'content',
+                                                     'sent_at',
+                                                     'is_read',
+                                                     'sender__id',
+                                                     'sender__email',
+                                                     'sender__first_name',
+                                                     'sender__last_name',
+                                                     'parent_message_id'
+                                                 )
+    
+    # Prepare data for the template
+    context = {
+        'unread_messages': unread_msgs,
+        'unread_count': unread_count,
+    }
+    
+    return render(request, 'messaging/unread_messages.html', context)
+
+
+@require_http_methods(["POST"])
+@login_required
+def mark_as_read(request, message_id):
+    """Mark a specific message as read"""
+    from django.utils import timezone
+    
+    # Get the message and verify ownership
+    message = get_object_or_404(Message, id=message_id, receiver=request.user)
+    
+    # Update the message
+    message.is_read = True
+    message.read_at = timezone.now()
+    message.save(update_fields=['is_read', 'read_at'])
+    
+    return JsonResponse({
+        'status': 'success',
+        'message_id': str(message_id)
+    })
 
 
 @login_required

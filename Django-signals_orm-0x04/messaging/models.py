@@ -54,12 +54,11 @@ class Message(models.Model):
     sent_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-    
-    # Custom managers
+
+# Custom managers
     objects = models.Manager()  # Default manager
     unread = UnreadMessagesManager()  # Custom manager for unread messages
     threaded = ThreadedMessagesManager()  # Custom manager for threaded operations
-
     class Meta:
         ordering = ['-sent_at']
         verbose_name = 'Message'
